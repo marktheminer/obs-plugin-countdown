@@ -23,7 +23,7 @@ inputs:
   workingDirectory:
     description: 'Working directory for packaging'
     required: false
-    default: ${{ .github.workspace }}
+    default: ${{ github.workspace }}
 runs:
   using: 'composite'
   steps:

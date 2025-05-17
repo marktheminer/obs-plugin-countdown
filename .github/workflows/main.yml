@@ -33,13 +33,13 @@ jobs:
         run: sudo apt-get install -y clang-format-13
 
       - name: Run clang-format
-        run: ./..github/scripts/check-format.sh && ./..github/scripts/check-changes.sh
+        run: ./.github/scripts/check-format.sh && ./.github/scripts/check-changes.sh
 
       - name: Install cmake-format
         run: sudo pip install cmakelang
 
       - name: Run cmake-format
-        run: ./..github/scripts/check-cmake.sh
+        run: ./.github/scripts/check-cmake.sh
 
   macos_build:
     name: 02 - macOS
@@ -76,7 +76,7 @@ jobs:
 
       - name: Setup Environment
         id: setup
-        working-directory: ${{ .github.workspace }}/plugin
+        working-directory: ${{ github.workspace }}/plugin
         run: |
           ## SETUP ENVIRONMENT SCRIPT
           print '::group::Clean Homebrew Environment'
@@ -113,14 +113,14 @@ jobs:
         id: ccache-cache
         uses: actions/cache@v3
         with:
-          path: ${{ .github.workspace }}/.ccache
+          path: ${{ github.workspace }}/.ccache
           key: macos-${{ matrix.arch }}-ccache-plugin-${{ steps.setup.outputs.ccacheDate }}
           restore-keys: |
             macos-${{ matrix.arch }}-ccache-plugin-
 
       - name: Check for GitHub Labels
         id: seekingTesters
-        if: ${{ .github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           if [[ -n "$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s "${{ github.event.pull_request.url }}" | jq -e '.labels[] | select(.name == "Seeking Testers")')" ]] {
             print 'found=true' >> $GITHUB_OUTPUT
@@ -129,47 +129,47 @@ jobs:
           }
 
       - name: Install Apple Developer Certificate
-        if: ${{ .github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
+        if: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
         uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071
         with:
-          keychain-password: ${{ .github.run_id }}
+          keychain-password: ${{ github.run_id }}
           p12-file-base64: ${{ secrets.MACOS_SIGNING_CERT }}
           p12-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
 
       - name: Set Signing Identity
-        if: ${{ .github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
+        if: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
         run: |
           print "CODESIGN_IDENT=${{ secrets.MACOS_SIGNING_APPLICATION_IDENTITY }}" >> $GITHUB_ENV
           print "CODESIGN_IDENT_INSTALLER=${{ secrets.MACOS_SIGNING_INSTALLER_IDENTITY }}" >> $GITHUB_ENV
 
       - name: Build Plugin
-        uses: ./plugin/..github/actions/build-plugin
+        uses: ./plugin/.github/actions/build-plugin
         with:
-          workingDirectory: ${{ .github.workspace }}/plugin
+          workingDirectory: ${{ github.workspace }}/plugin
           target: ${{ matrix.arch }}
           config: RelWithDebInfo
           codesign: 'true'
           codesignIdent: ${{ env.CODESIGN_IDENT }}
 
       - name: Package Plugin
-        uses: ./plugin/..github/actions/package-plugin
+        uses: ./plugin/.github/actions/package-plugin
         with:
-          workingDirectory: ${{ .github.workspace }}/plugin
+          workingDirectory: ${{ github.workspace }}/plugin
           target: ${{ matrix.arch }}
           config: RelWithDebInfo
-          codesign: ${{ .github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
-          notarize: ${{ startsWith(.github.ref, 'refs/tags/') && .github.event_name != 'pull_request' && steps.setup.outputs.haveNotarizationUser == 'true' }}
+          codesign: ${{ github.event_name != 'pull_request' && steps.setup.outputs.haveCodesignIdent == 'true' }}
+          notarize: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && steps.setup.outputs.haveNotarizationUser == 'true' }}
           codesignIdent: ${{ env.CODESIGN_IDENT }}
           installerIdent: ${{ env.CODESIGN_IDENT_INSTALLER }}
           codesignUser: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
           codesignPass: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
 
       - name: Upload Build Artifact
-        if: ${{ success() && (.github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
+        if: ${{ success() && (github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PLUGIN_NAME }}-macos-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}
-          path: ${{ .github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*-macos-${{ matrix.arch }}.pkg
+          path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*-macos-${{ matrix.arch }}.pkg
 
   linux_build:
     name: 02 - Linux
@@ -201,7 +201,7 @@ jobs:
           submodules: recursive
 
       - name: Setup Environment
-        working-directory: ${{ .github.workspace }}/plugin
+        working-directory: ${{ github.workspace }}/plugin
         id: setup
         run: |
           ## SETUP ENVIRONMENT SCRIPT
@@ -212,14 +212,14 @@ jobs:
         id: ccache-cache
         uses: actions/cache@v3
         with:
-          path: ${{ .github.workspace }}/.ccache
+          path: ${{ github.workspace }}/.ccache
           key: linux-${{ matrix.arch }}-ccache-plugin-${{ steps.setup.outputs.ccacheDate }}
           restore-keys: |
             linux-${{ matrix.arch }}-ccache-plugin-
 
       - name: Check for GitHub Labels
         id: seekingTesters
-        if: ${{ .github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           ## GITHUB LABEL SCRIPT
           if [[ -n "$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -s "${{ github.event.pull_request.url }}" | jq -e '.labels[] | select(.name == "Seeking Testers")')" ]]; then
@@ -229,25 +229,25 @@ jobs:
           fi
 
       - name: Build Plugin
-        uses: ./plugin/..github/actions/build-plugin
+        uses: ./plugin/.github/actions/build-plugin
         with:
-          workingDirectory: ${{ .github.workspace }}/plugin
+          workingDirectory: ${{ github.workspace }}/plugin
           target: ${{ matrix.arch }}
           config: RelWithDebInfo
 
       - name: Package Plugin
-        uses: ./plugin/..github/actions/package-plugin
+        uses: ./plugin/.github/actions/package-plugin
         with:
-          workingDirectory: ${{ .github.workspace }}/plugin
+          workingDirectory: ${{ github.workspace }}/plugin
           target: ${{ matrix.arch }}
           config: RelWithDebInfo
 
       - name: Upload Build Artifact
-        if: ${{ success() && (.github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
+        if: ${{ success() && (github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PLUGIN_NAME }}-linux-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}
-          path: ${{ .github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*-linux-${{ matrix.arch }}.*
+          path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*-linux-${{ matrix.arch }}.*
 
   windows_build:
     name: 02 - Windows
@@ -279,7 +279,7 @@ jobs:
           submodules: recursive
 
       - name: Setup Environment
-        working-directory: ${{ .github.workspace }}/plugin
+        working-directory: ${{ github.workspace }}/plugin
         id: setup
         run: |
           ## SETUP ENVIRONMENT SCRIPT
@@ -288,8 +288,8 @@ jobs:
 
       - name: Check for GitHub Labels
         id: seekingTesters
-        working-directory: ${{ .github.workspace }}/plugin
-        if: ${{ .github.event_name == 'pull_request' }}
+        working-directory: ${{ github.workspace }}/plugin
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           ## GITHUB LABEL SCRIPT
           $LabelFound = try {
@@ -308,47 +308,47 @@ jobs:
           "found=$(([string]${LabelFound}).ToLower())" >> $env:GITHUB_OUTPUT
 
       - name: Build Plugin
-        uses: ./plugin/..github/actions/build-plugin
+        uses: ./plugin/.github/actions/build-plugin
         with:
-          workingDirectory: ${{ .github.workspace }}/plugin
+          workingDirectory: ${{ github.workspace }}/plugin
           target: ${{ matrix.arch }}
           config: RelWithDebInfo
           visualStudio: 'Visual Studio 17 2022'
 
       - name: Package Plugin
-        uses: ./plugin/..github/actions/package-plugin
+        uses: ./plugin/.github/actions/package-plugin
         with:
-          workingDirectory: ${{ .github.workspace }}/plugin
+          workingDirectory: ${{ github.workspace }}/plugin
           target: ${{ matrix.arch }}
           config: RelWithDebInfo
 
       - name: Upload Build Artifact
-        if: ${{ success() && (.github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
+        if: ${{ success() && (github.event_name != 'pull_request' || steps.seekingTesters.outputs.found == 'true') }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PLUGIN_NAME }}-windows-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}
-          path: ${{ .github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*.zip
+          path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*.zip
 
       - name: Package Plugin Installer
-        if: ${{ startsWith(.github.ref, 'refs/tags/') && .github.event_name != 'pull_request' }}
-        uses: ./plugin/..github/actions/package-plugin
+        if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
+        uses: ./plugin/.github/actions/package-plugin
         with:
-          workingDirectory: ${{ .github.workspace }}/plugin
+          workingDirectory: ${{ github.workspace }}/plugin
           target: ${{ matrix.arch }}
           config: RelWithDebInfo
           createInstaller: true
 
       - name: Upload Installer Artifact
-        if: ${{ startsWith(.github.ref, 'refs/tags/') && .github.event_name != 'pull_request' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PLUGIN_NAME }}-windows-${{ matrix.arch }}-${{ steps.setup.outputs.commitHash }}-installer
-          path: ${{ .github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*.exe
+          path: ${{ github.workspace }}/plugin/release/${{ env.PLUGIN_NAME }}-*.exe
 
   make-release:
     name: 03 - Create and upload release
     runs-on: ubuntu-22.04
-    if: .github.event_name == 'push' && contains(.github.ref, 'refs/tags/')
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
     needs: [macos_build, linux_build, windows_build]
     defaults:
       run:
@@ -380,7 +380,7 @@ jobs:
           prerelease: ${{ contains(steps.metadata.outputs.version, 'rc') || contains(steps.metadata.outputs.version, 'beta') }}
           tag_name: ${{ steps.metadata.outputs.version }}
           name: "${{ env.PLUGIN_NAME }} ${{ steps.metadata.outputs.version }}"
-          body_path: ${{ .github.workspace }}/CHECKSUMS.txt
+          body_path: ${{ github.workspace }}/CHECKSUMS.txt
           files: |
             ${{ github.workspace }}/**/*.zip
             ${{ github.workspace }}/**/*.exe
